@@ -1,0 +1,20 @@
+.metallic-hover {
+  background-image: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(0, 0, 0, 0.1) 70%
+  );
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.3s ease, transform 0.5s ease;
+}
+
+.metallic-hover:hover {
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    0 0 10px rgba(255, 105, 180, 0.6),
+    0 0 20px rgba(255, 20, 147, 0.5);
+  transform: translateY(-5px);
+}
