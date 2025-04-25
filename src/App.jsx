@@ -2,14 +2,13 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import  GameCard  from './components/GameCard'
-
+import  GameRoom  from './components/GameRoom'
 function App() {
 
 
   return (
     <>
-      <GameCard />
+      <GameRoom />
     </>
   )
 }
