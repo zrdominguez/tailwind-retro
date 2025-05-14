@@ -1,13 +1,14 @@
 import './GameCard.css'
 import { useState } from "react"
 
-const GameCard = ({title="", src = ""}) => {
+const GameCard = ({name="", src = ""}) => {
 
+  console.log(name)
   return (
-    <div className="w-auto h-auto rounded bg-gradient-to-br from-[#FF69B4] to-[#FF1493] metallic-hover justify-center max-w-80 max-h-100 p-4">
-      <h2 className='text-xl font-semibold mb-2 font-mono'>{title}</h2>
-      <div className="img-container">
-        <img src='https://zechariahdbucket.s3.us-east-2.amazonaws.com/super-mario-world.jpeg' alt='mario-world'/>
+    <div className="w-200 h-300 rounded bg-gradient-to-br from-[#FF69B4] to-[#FF1493] metallic-hover justify-center max-w-80 max-h-100 p-4">
+      <h2 className='text-xl font-semibold mb-2 font-mono'>{name}</h2>
+      <div className="img-container flex items-center justify-center">
+        <img src= {src} alt='mario-world'/>
       </div>
     </div>
   )

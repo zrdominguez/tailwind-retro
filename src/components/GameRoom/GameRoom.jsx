@@ -1,5 +1,12 @@
-import  GameCard  from "../GameCard"
-import "./GameRoom.css"
+import  GameCard  from "../GameCard";
+import "./GameRoom.css";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchGames,
+  selectAllGames,
+  selectGameStatus,
+  selectGameError } from "../../redux/games/gamesSlice";
 
 const TEST = [
   {
@@ -26,13 +33,36 @@ const TEST = [
 
 
 const GameRoom = () => {
+  const [listGames, setListGames] = useState([]);
+  const dispatch = useDispatch();
+  const games = useSelector(selectAllGames);
+  const status = useSelector(selectGameStatus);
+  const error = useSelector(selectGameError);
+
+
+
+  useEffect(() => {
+    if(status === 'idle'){
+      dispatch(fetchGames());
+    }
+  }, [status, dispatch])
+
+  useEffect(() => {
+    if(status === 'succeeded'){
+      setListGames(games)
+    }
+  }, [status, games])
+
+  if(status === 'succeeded') console.log(games);
+
+
   return (
     <div className="crt">
       <header className="text-center text-pink-400 text-4xl font-mono p-6">
       🎮 Retro Game Room 🎮
       </header>
       <div className="grid grid-cols-2 md:grid-rows-3 gap-8 p-6">
-        {TEST.map(game => <GameCard key={game.id} title={game.title} src={game.imgUrl} />)}
+        {games.map(game => <GameCard key={game.id} name={game.name} src={game.background_image} />)}
       </div>
     </div>
 
