@@ -6,7 +6,11 @@ import {
   fetchGames,
   selectAllGames,
   selectGameStatus,
-  selectGameError } from "../../redux/games/gamesSlice";
+  selectGameError,
+  selectNextPage,
+  selectPrevPage,
+  fetchGamesByUrl,
+ } from "../../redux/games/gamesSlice";
 
 const TEST = [
   {
@@ -38,6 +42,8 @@ const GameRoom = () => {
   const games = useSelector(selectAllGames);
   const status = useSelector(selectGameStatus);
   const error = useSelector(selectGameError);
+  const nextPage = useSelector(selectNextPage);
+  const prevPage = useSelector(selectPrevPage);
 
 
 
@@ -53,6 +59,16 @@ const GameRoom = () => {
     }
   }, [status, games])
 
+  const handleNext = () => {
+    dispatch(fetchGamesByUrl(nextPage));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  const handlePrev = () => {
+    dispatch(fetchGamesByUrl(prevPage));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   if(status === 'succeeded') console.log(games);
 
 
@@ -61,8 +77,26 @@ const GameRoom = () => {
       <header className="text-center text-pink-400 text-4xl font-mono p-6">
       🎮 Retro Game Room 🎮
       </header>
-      <div className="grid grid-cols-2 md:grid-rows-3 gap-8 p-6">
-        {games.map(game => <GameCard key={game.id} name={game.name} src={game.background_image} />)}
+      {status === 'loading' &&
+      <h1 className="loading text-xl flex items-center justify-self-center">Loading
+        <span className="dot ml-1">.</span>
+        <span className="dot">.</span>
+        <span className="dot">.</span>
+      </h1>}
+      <div className="grid grid-cols-3 md:grid-rows-5 gap-10 p-6">
+        {games.map(game => <GameCard key={game.id} game={game} />)}
+      </div>
+      <div className="flex justify-center gap-40">
+        { prevPage &&
+          <button
+          className="prev-btn"
+          onClick={handlePrev}
+          >Prev</button>
+        }
+        <button
+        className="next-btn"
+        onClick={handleNext}
+        >Next</button>
       </div>
     </div>
 
