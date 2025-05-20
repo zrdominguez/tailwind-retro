@@ -1,21 +1,75 @@
 import './GameCard.css'
-import { useState } from "react"
+import { useState } from "react";
+import { SiNintendo } from "react-icons/si";
+import { IoLogoPlaystation } from "react-icons/io";
+import {
+  FaPlaystation,
+  FaXbox,
+  FaWindows,
+  FaAndroid,
+  FaApple
+} from 'react-icons/fa';
+
+const platformIcons = {
+  playstation: <FaPlaystation className="text-white w-6 h-6" />,
+  xbox: <FaXbox className="text-green-400 w-ful h-full "/>,
+  pc: <FaWindows className="text-blue-300 w-full h-full" />,
+  nintendo: <SiNintendo className="text-red-500 h-full w-full" />,
+  ios: <FaApple className="text-gray-300 w-full h-full"/>,
+  android: <FaAndroid className="text-green-500 w-full h-full" />,
+  sega: <img src='https://cdn.worldvectorlogo.com/logos/sega-logo.svg'/>
+};
+
+//https://cdn.worldvectorlogo.com/logos/sega-logo.svg
+
 
 const GameCard = ({game}) => {
   const {
     background_image,
     genres,
     name,
-    platforms,
     parent_platforms,
     released
   } = game;
 
   return (
-    <div className="w-200 h-300 rounded bg-gradient-to-br from-[#FF69B4] to-[#FF1493] metallic-hover justify-center max-w-80 max-h-100 p-4">
-      <h2 className='text-xl font-semibold mb-2 font-mono'>{name}</h2>
-      <div className="img-container w-full h-2/3w-full h-2/3 bg-black flex items-center justify-center">
-        <img className="max-w-full max-h-full object-contain" src= {background_image} alt={name}/>
+     <div className="w-72 rounded-2xl shadow-lg bg-gradient-to-br from-[#FF69B4] to-[#FF1493] metallic-hover overflow-hidden font-mono text-white">
+      <div className="w-full h-40 bg-black flex items-center justify-center">
+        <img
+          className="object-contain w-full h-full"
+          src={background_image}
+          alt={name}
+        />
+      </div>
+
+      <div className="p-4 space-y-2">
+        <h2 className="text-xl font-bold">{name}</h2>
+
+        <div className="flex flex-wrap justify-left gap-3 items-center">
+
+          {parent_platforms?.filter((parent) => platformIcons[parent.platform.slug])
+          .map((parent, i) => {
+            console.log(parent);
+            return(
+            <div key={i} className="flex items-center w-8 h-8 ">
+              {platformIcons[parent.platform.slug]}
+            </div>
+            )
+          })}
+        </div>
+
+        <p className="text-xs text-white/80">Released: {released}</p>
+
+        <div className="flex flex-wrap gap-1 text-sm">
+          {genres.map((genre, i) => (
+            <span
+              key={i}
+              className="bg-white/20 px-2 py-0.5 rounded-full text-xs"
+            >
+              {genre.name}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   )

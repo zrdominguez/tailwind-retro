@@ -1,4 +1,5 @@
 import  GameCard  from "../GameCard";
+import Pages from "../Pages";
 import "./GameRoom.css";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,43 +10,21 @@ import {
   selectGameError,
   selectNextPage,
   selectPrevPage,
-  fetchGamesByUrl,
+  selectCurrentPage,
+  selectPageHistory
  } from "../../redux/games/gamesSlice";
-
-const TEST = [
-  {
-    id: 1,
-    title: "Super Mario World",
-    imgUrl: "path-to-image1",
-  },
-  {
-    id: 2,
-    title: "The Legend of Zelda: A Link to the Past",
-    imgUrl: "path-to-image2",
-  },
-  {
-    id: 3,
-    title: "Sonic the Hedgehog",
-    imgUrl: "path-to-image3",
-  },
-  {
-    id: 4,
-    title: "Street Fighter II",
-    imgUrl: "path-to-image4",
-  },
-];
 
 
 const GameRoom = () => {
-  const [listGames, setListGames] = useState([]);
+  const [gameList, setGameList] = useState([]);
   const dispatch = useDispatch();
   const games = useSelector(selectAllGames);
   const status = useSelector(selectGameStatus);
   const error = useSelector(selectGameError);
   const nextPage = useSelector(selectNextPage);
   const prevPage = useSelector(selectPrevPage);
-
-
+  const currentPage = useSelector(selectCurrentPage);
+  const pageHistory = useSelector(selectPageHistory);
 
   useEffect(() => {
     if(status === 'idle'){
@@ -55,19 +34,21 @@ const GameRoom = () => {
 
   useEffect(() => {
     if(status === 'succeeded'){
-      setListGames(games)
+      setGameList(games)
     }
   }, [status, games])
 
   const handleNext = () => {
-    dispatch(fetchGamesByUrl(nextPage));
+    dispatch(fetchGames({page: currentPage + 1, url: nextPage}));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   const handlePrev = () => {
-    dispatch(fetchGamesByUrl(prevPage));
+    dispatch(fetchGames({page: currentPage - 1, url: prevPage}));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+
 
   if(status === 'succeeded') console.log(games);
 
@@ -77,27 +58,43 @@ const GameRoom = () => {
       <header className="text-center text-pink-400 text-4xl font-mono p-6">
       🎮 Retro Game Room 🎮
       </header>
-      {status === 'loading' &&
+      {status == "failed" && <div className="text-red-600">Error: {error}</div>}
+      {status === 'loading' ?
       <h1 className="loading text-xl flex items-center justify-self-center">Loading
         <span className="dot ml-1">.</span>
         <span className="dot">.</span>
         <span className="dot">.</span>
-      </h1>}
-      <div className="grid grid-cols-3 md:grid-rows-5 gap-10 p-6">
-        {games.map(game => <GameCard key={game.id} game={game} />)}
-      </div>
-      <div className="flex justify-center gap-40">
-        { prevPage &&
+      </h1> :
+      <>
+        <div className="grid grid-cols-3 md:grid-rows-5 gap-10 p-6">
+          {gameList.map(game => <GameCard key={game.id} game={game} />)}
+        </div>
+        <div className="flex justify-center gap-40">
           <button
-          className="prev-btn"
-          onClick={handlePrev}
-          >Prev</button>
-        }
-        <button
-        className="next-btn"
-        onClick={handleNext}
-        >Next</button>
-      </div>
+            className="
+              prev-btn
+              disabled:!shadow-none
+              disabled:opacity-50
+              disabled:!cursor-not-allowed"
+            disabled={!prevPage}
+            onClick={handlePrev}
+          >Prev
+          </button>
+          <Pages
+            currentPage={currentPage}
+            dispatch={dispatch}
+            fetchGames={fetchGames}
+            pageHistory={pageHistory}
+          />
+          <button
+            className="next-btn"
+            onClick={handleNext}
+          >Next
+          </button>
+        </div>
+      </>
+      }
+
     </div>
 
   )
