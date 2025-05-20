@@ -25,7 +25,7 @@ const Pages = ({ currentPage, dispatch, fetchGames, pageHistory}) => {
             key={value}
             onClick={() => handleDirectPage(value)}
             className={`px-3 py-1 rounded ${value === currentPage ? 'bg-blue-500 text-white' : ''}
-            hover:cursor-pointer hover:`}
+            hover:cursor-pointer hover:underline`}
           >
             {value}
           </p>
