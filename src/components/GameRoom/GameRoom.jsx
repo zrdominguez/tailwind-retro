@@ -54,7 +54,7 @@ const GameRoom = () => {
 
 
   return (
-    <div className="crt">
+    <div className="crt px-10 py-6 max-w-6xl mx-auto">
       <header className="text-center text-pink-400 text-4xl font-mono p-6">
       🎮 Retro Game Room 🎮
       </header>
@@ -69,7 +69,7 @@ const GameRoom = () => {
         <div className="grid grid-cols-3 md:grid-rows-5 gap-10 p-6">
           {gameList.map(game => <GameCard key={game.id} game={game} />)}
         </div>
-        <div className="flex justify-center gap-40">
+        <div className="flex justify-center gap-30">
           <button
             className="
               prev-btn

@@ -57,16 +57,14 @@ const gamesSlice = createSlice({
       })
       .addCase(fetchGames.fulfilled, (state, action) => {
         const { results, next, previous, usedUrl, page } = action.payload;
-
         state.status = 'succeeded';
         state.gamesList = results;
-        state.nextUrl = next;
-        state.prevUrl = previous;
+        state.nextPageUrl = next;
+        state.prevPageUrl = previous;
 
         state.pageHistory[page] = usedUrl;
         state.currentPage = page;
 
-        // Optional: you could pre-load next page here by saving `next`
         if (next) {
           state.pageHistory[page + 1] = next;
         }

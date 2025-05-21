@@ -17,7 +17,7 @@ const Pages = ({ currentPage, dispatch, fetchGames, pageHistory}) => {
   }
 
   return (
-    <div className="flex gap-2 items-center justify-center mt-4">
+    <div className="flex gap-2 items-center justify-center">
 
       {visiblePages.map(value => {
         return (
