@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { gsap } from "gsap";
 import * as TWEEN from '@tweenjs/tween.js';
 import { Group as TweenGroup } from '@tweenjs/tween.js';
-
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -19,6 +19,7 @@ const logos = [
 
 
 const ThreeCanvas = () => {
+  const navigate = useNavigate();
   const tweenGroup = new TweenGroup();
   const mountRef = useRef(null);
 
@@ -49,8 +50,8 @@ const ThreeCanvas = () => {
     const radius = 5;
 
     const modelPaths = [
-      '/logos/nintendo_nes_original/scene.gltf',
-      '/logos/sega_saturn/scene.gltf',
+      {consoleName: "nes" ,path: '/logos/nintendo_nes_original/scene.gltf'},
+      {consoleName: "sega_saturn", path:'/logos/sega_saturn/scene.gltf'},
       // '/models/console2/scene.gltf',
       // '/models/console3/scene.gltf',
       // etc...
@@ -58,8 +59,8 @@ const ThreeCanvas = () => {
 
     const originalPositions = new Map();
 
-    modelPaths.forEach((modelPath, index) => {
-      loader.load(modelPath, (gltf) => {
+    modelPaths.forEach(({consoleName, path}, index) => {
+      loader.load(path, (gltf) => {
         const model = gltf.scene;
 
         // Normalize size
@@ -83,10 +84,12 @@ const ThreeCanvas = () => {
 
         // Face the center
         model.lookAt(0, 0, 0);
-        if (modelPath.includes("sega_saturn")) {
+        if (path.includes("sega_saturn")) {
           model.rotation.y += Math.PI; // flip horizontally
           model.rotation.x += Math.PI; // flip vertically
         }
+
+        model.userData.consoleName = consoleName;
 
         // Save original pos
         originalPositions.set(model, model.position.clone());
@@ -100,7 +103,8 @@ const ThreeCanvas = () => {
     const mouse = new THREE.Vector2();
     let isPaused = false;
     let targetRotationY = 0
-    let INTERSECTED = null;
+    let pausedObject = null;
+    //let INTERSECTED = null;
 
     const handleClick = (event) => {
       const bounds = renderer.domElement.getBoundingClientRect();
@@ -116,21 +120,29 @@ const ThreeCanvas = () => {
           clickedMesh = clickedMesh.parent; // climb up to logoGroup child
         }
 
-        isPaused = true;
+        if (!isPaused || clickedMesh !== pausedObject) {
+          // First click (or different object) - pause and focus
+          isPaused = true;
+          pausedObject = clickedMesh;
 
-        // Get object's position relative to logoGroup center
-        const pos = clickedMesh.position; // local position (logoGroup space)
-        const angle = Math.atan2(pos.x, pos.z); // angle around Y
+          const pos = clickedMesh.position; // local position (logoGroup space)
+          const angle = Math.atan2(pos.x, pos.z); // angle around Y
+          targetRotationY = -angle;
 
-        // Compute how much to rotate logoGroup so this angle aligns with front (Z axis)
-        targetRotationY = -angle;
-
-        new TWEEN.Tween(logoGroup.rotation, tweenGroup)
-          .to({ y: targetRotationY }, 1000)
-          .easing(TWEEN.Easing.Quadratic.Out)
-          .start();
+          new TWEEN.Tween(logoGroup.rotation, tweenGroup)
+            .to({ y: targetRotationY }, 1000)
+            .easing(TWEEN.Easing.Quadratic.Out)
+            .start();
+        } else {
+          // Second click on the same object - navigate
+          const consoleId = clickedMesh.userData.consoleName || 'default';
+          console.log(consoleId)
+          navigate(`/games`);
+        }
       } else {
+        // Clicked empty space - resume rotation
         isPaused = false;
+        pausedObject = null;
       }
     };
 
@@ -155,7 +167,7 @@ const ThreeCanvas = () => {
         logoGroup.rotation.y += 0.005;
       } else {
       // Stay at target rotation to avoid drifting
-      logoGroup.rotation.y = targetRotationY;
+        logoGroup.rotation.y = targetRotationY;
       }
 
       tweenGroup.update();
