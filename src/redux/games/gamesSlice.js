@@ -3,33 +3,45 @@ import axios from 'axios';
 
 const API_KEY = '411e7482b082456cbf968bac1646f53a';
 
-export const fetchGames = createAsyncThunk(
-  'games/fetchGames',
-  async ({ page = 1, url = null } = {}) => {
-    const finalUrl = url ?? `https://api.rawg.io/api/games?key=${API_KEY}&page_size=15&dates=1980-01-01,2005-12-31&ordering=-rating`;
-    const response = await axios.get(finalUrl);
-    return {
-      results: response.data.results,
-      next: response.data.next,
-      previous: response.data.previous,
-      usedUrl: finalUrl,
-      page: page,
-    };
-  }
-);
-
-// export const fetchGames = createAsyncThunk('games/fetchGames', async () => {
-//   const response = await axios.get(`https://api.rawg.io/api/games?key=${API_KEY}&page_size=15&dates=1980-01-01,2005-12-31&ordering=-rating`);
-//   return response.data;
-// });
-
-// export const fetchGamesByUrl = createAsyncThunk(
-//   'games/fetchGamesByUrl',
-//   async (url) => {
-//     const response = await axios.get(url);
-//     return response.data;
+// export const fetchGames = createAsyncThunk(
+//   'games/fetchGames',
+//   async ({ page = 1, url = null } = {}) => {
+//     const finalUrl = url ?? `https://api.rawg.io/api/games?key=${API_KEY}&page_size=15&dates=1980-01-01,2005-12-31&ordering=-rating`;
+//     const response = await axios.get(finalUrl);
+//     return {
+//       results: response.data.results,
+//       next: response.data.next,
+//       previous: response.data.previous,
+//       usedUrl: finalUrl,
+//       page: page,
+//     };
 //   }
 // );
+
+export const fetchGames = createAsyncThunk(
+  'games/fetchGames',
+  async ({ page = 1, url, filters = {} }, thunkAPI) => {
+    try {
+      let query = url || `https://api.rawg.io/api/games?key=${API_KEY}&page_size=15&dates=1980-01-01,2005-12-31&ordering=-rating`;
+
+      const params = new URLSearchParams(filters);
+      if (params.toString()) {
+        query += `&${params.toString()}`;
+      }
+      console.log(query);
+      const response = await axios.get(query);
+      return {
+        results: response.data.results,
+        next: response.data.next,
+        previous: response.data.previous,
+        usedUrl: query,
+        page: page,
+      };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
 
 const initialState = {
     gamesList: [],
@@ -75,59 +87,6 @@ const gamesSlice = createSlice({
       });
   }
 });
-
-// const gamesSlice = createSlice({
-//   name: 'games',
-//   initialState: {
-//     gamesList: [],
-//     status: 'idle',
-//     error: null,
-//     nextPageUrl: null,
-//     prevPageUrl: null,
-//     currentPage:1,
-//     pageHistory:{
-//     },
-//   },
-//   reducers: {},
-//   extraReducers: builder => {
-//     builder
-//       .addCase(fetchGames.pending, state => {
-//         state.status = 'loading';
-//       })
-//       .addCase(fetchGames.fulfilled, (state, action) => {
-//         state.status = 'succeeded';
-//         state.gamesList = action.payload.results;
-//         state.nextPageUrl = action.payload.next;
-//         state.prevPageUrl = action.payload.previous;
-//         const currentPage = action.meta.arg.page;
-//         state.pageHistory[currentPage] = action.meta.arg.url;
-
-//         // Optionally save the next URL as the next page
-//         if (action.payload.next) {
-//           const nextPage = currentPage + 1;
-//           state.pageHistory[nextPage] = action.payload.next;
-//         }
-//         state.currentPage = currentPage;
-//       })
-//       .addCase(fetchGamesByUrl.pending, (state) => {
-//         state.status = 'loading';
-//       })
-//       .addCase(fetchGamesByUrl.fulfilled, (state, action) => {
-//         state.status = 'succeeded';
-//         state.gamesList = action.payload.results;
-//         state.nextPageUrl = action.payload.next;
-//         state.prevPageUrl = action.payload.previous;
-//       })
-//       .addCase(fetchGames.rejected, (state, action) => {
-//         state.status = 'failed';
-//         state.error = action.error.message;
-//       })
-//       .addCase(fetchGamesByUrl.rejected, (state, action) => {
-//         state.status = 'failed';
-//         state.error = action.error.message;
-//       });
-//   },
-// });
 
 export const selectAllGames = (state) => state.games.gamesList;
 export const selectGameStatus = (state) => state.games.status;
