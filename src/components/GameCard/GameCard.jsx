@@ -1,7 +1,6 @@
 import './GameCard.css'
 import { useState } from "react";
 import { SiNintendo } from "react-icons/si";
-import { IoLogoPlaystation } from "react-icons/io";
 import {
   FaPlaystation,
   FaXbox,
@@ -19,8 +18,6 @@ const platformIcons = {
   android: <FaAndroid className="text-green-500 w-full h-full" />,
   sega: <img src='https://cdn.worldvectorlogo.com/logos/sega-logo.svg'/>
 };
-
-//https://cdn.worldvectorlogo.com/logos/sega-logo.svg
 
 
 const GameCard = ({game}) => {

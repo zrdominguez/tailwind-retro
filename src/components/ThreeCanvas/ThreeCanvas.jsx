@@ -1,177 +1,227 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { gsap } from "gsap";
+import * as TWEEN from '@tweenjs/tween.js';
+import { Group as TweenGroup } from '@tweenjs/tween.js';
+
+
+
 
 const logos = [
   ["/logos/dreamcast.png", "/logos/genesis.png" ],
   ["/logos/gameboy.png", "/logos/gba.png"],
   ["/logos/psone.png", "logos/ps2.png"],
-  ["/logos/nes.png", "/logos/snes.png"],
+  ["/logos/nintendo_nes_original/scene.gltf", "/logos/snes.png"],
   ["/logos/saturn.png", "/logos/atari.png"],
   ["/logos/pc.png", "logos/xbox.png"],
 ]
 
+
 const ThreeCanvas = () => {
+  const tweenGroup = new TweenGroup();
   const mountRef = useRef(null);
-  //const rendererRef = useRef();
 
   useEffect(() => {
-     const mount = mountRef.current;
+    const mount = mountRef.current;
     const width = mount.clientWidth;
     const height = mount.clientHeight;
 
-    // Scene
     const scene = new THREE.Scene();
-    //scene.background = new THREE.Color(0x111111);
-
-    // Camera
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      width / height,
-      0.1,
-      1000
-    );
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     camera.position.z = 8;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(width, height);
     mount.appendChild(renderer.domElement);
-    //rendererRef.current = renderer;
 
-    // Geometry
-    // const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
-    // const material = new THREE.MeshStandardMaterial({
-    //   color: 0xff1493,
-    //   metalness: 0.5,
-    //   roughness: 0.1,
-    // });
-    // const knot = new THREE.Mesh(geometry, material);
-    // scene.add(knot);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambientLight);
 
-    // Light
-    const light = new THREE.AmbientLight(0xffffff, 1);
-    const backlight = new THREE.AmbientLight(0xffffff, 1);
-    light.position.set(5, 5, 5);
-    backlight.position.set(5, 5, -5);
-    scene.add(light);
-    // scene.add(backlight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
 
-    //Group to rotate
     const logoGroup = new THREE.Group();
+    scene.add(logoGroup);
 
+    const loader = new GLTFLoader();
     const radius = 5;
-    const loader = new THREE.TextureLoader();
 
-    logos.forEach((logo, index) => {
-      loader.load(logo[0], texture1 => {
-        loader.load(logo[1], texture2 => {
+    const modelPaths = [
+      '/logos/nintendo_nes_original/scene.gltf',
+      '/logos/sega_saturn/scene.gltf',
+      // '/models/console2/scene.gltf',
+      // '/models/console3/scene.gltf',
+      // etc...
+    ];
 
-        //clean up the texture so the images look crisper
-        texture1.minFilter = THREE.LinearFilter;
-        texture1.magFilter = THREE.LinearFilter;
-        texture1.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const originalPositions = new Map();
 
+    modelPaths.forEach((modelPath, index) => {
+      loader.load(modelPath, (gltf) => {
+        const model = gltf.scene;
 
-        const geometry = new THREE.PlaneGeometry(2, 2);
-        const material = new THREE.MeshBasicMaterial({
-          map: texture1,
-          transparent: true,
-          opacity: 1,
-          side: THREE.DoubleSide
-        });
+        // Normalize size
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 1 / maxDim;
+        model.scale.setScalar(scale);
 
-        const mesh = new THREE.Mesh(geometry, material);
+        // Center model
+        box.setFromObject(model); // Update after scaling
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        model.position.sub(center); // move pivot to center
 
-        const angle = (index / logos.length) * Math.PI * 2;
-        mesh.position.x = radius * Math.cos(angle);
-        mesh.position.z = radius * Math.sin(angle);
-        mesh.lookAt(0, 0, 0);
+        // Position on circle
+        const angle = (index / modelPaths.length) * Math.PI * 2;
+        model.position.x = radius * Math.cos(angle);
+        model.position.z = radius * Math.sin(angle);
 
-        mesh.userData = {
-          textures: [texture1, texture2],
-          currentIndex: 0
-        };
+        // Face the center
+        model.lookAt(0, 0, 0);
+        if (modelPath.includes("sega_saturn")) {
+          model.rotation.y += Math.PI; // flip horizontally
+          model.rotation.x += Math.PI; // flip vertically
+        }
 
-        logoGroup.add(mesh);
-        });
+        // Save original pos
+        originalPositions.set(model, model.position.clone());
+
+        logoGroup.add(model);
       });
     });
 
-    scene.add(logoGroup);
+    // Raycaster & Mouse
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isPaused = false;
+    let targetRotationY = 0
+    let INTERSECTED = null;
 
-    const triggerLogoFade = (mesh) => {
-      const { textures, currentIndex } = mesh.userData;
-      const nextIndex = (currentIndex + 1) % textures.length;
+    const handleClick = (event) => {
+      const bounds = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
-      let opacity = 1;
-      const fadeOut = () => {
-        opacity -= 0.05;
-        mesh.material.opacity = opacity;
-        if (opacity <= 0) {
-          mesh.material.map = textures[nextIndex];
-          mesh.userData.currentIndex = nextIndex;
-          fadeIn();
-        } else {
-          requestAnimationFrame(fadeOut);
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(logoGroup.children, true);
+
+      if (intersects.length > 0) {
+        let clickedMesh = intersects[0].object;
+        while (clickedMesh.parent && clickedMesh.parent !== logoGroup) {
+          clickedMesh = clickedMesh.parent; // climb up to logoGroup child
         }
-      };
 
-      const fadeIn = () => {
-        opacity += 0.05;
-        mesh.material.opacity = opacity;
-        if (opacity < 1) {
-          requestAnimationFrame(fadeIn);
-        }
-      };
+        isPaused = true;
 
-      fadeOut();
+        // Get object's position relative to logoGroup center
+        const pos = clickedMesh.position; // local position (logoGroup space)
+        const angle = Math.atan2(pos.x, pos.z); // angle around Y
+
+        // Compute how much to rotate logoGroup so this angle aligns with front (Z axis)
+        targetRotationY = -angle;
+
+        new TWEEN.Tween(logoGroup.rotation, tweenGroup)
+          .to({ y: targetRotationY }, 1000)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .start();
+      } else {
+        isPaused = false;
+      }
     };
 
-    setInterval(() => {
-      const children = logoGroup.children;
-      if (children.length > 0) {
-        const randomIndex = Math.floor(Math.random() * children.length);
-        const mesh = children[randomIndex];
-        if (mesh.userData.textures.length > 1) {
-          triggerLogoFade(mesh);
-        }
-      }
-    }, 4000);
+    renderer.domElement.addEventListener('click', handleClick);
 
-    // Animate
+    // const onMouseMove = (event) => {
+    //   const rect = mount.getBoundingClientRect();
+    //   mouse.x = ((event.clientX - rect.left) / width) * 2 - 1;
+    //   mouse.y = -((event.clientY - rect.top) / height) * 2 + 1;
+    // };
+
+    // mount.addEventListener('mousemove', onMouseMove);
+
+    const clock = new THREE.Clock();
+
     const animate = () => {
       requestAnimationFrame(animate);
+
+      const elapsed = clock.getElapsedTime();
+
+      if (!isPaused) {
+        logoGroup.rotation.y += 0.005;
+      } else {
+      // Stay at target rotation to avoid drifting
+      logoGroup.rotation.y = targetRotationY;
+      }
+
+      tweenGroup.update();
+
+      // 🎈 Floaty + Wobbly Animation
+      logoGroup.children.forEach((model, index) => {
+        // Gentle float up and down
+        const floatHeight = 0.1 * Math.sin(elapsed * 2 + index);
+        model.position.y = originalPositions.get(model).y + floatHeight;
+
+        // Optional gentle wobble
+        model.rotation.x = 0.05 * Math.sin(elapsed * 1.5 + index);
+        model.rotation.z = 0.05 * Math.cos(elapsed * 1.5 + index);
+      });
+
+      //renderer.render(scene, camera);
+      // Raycasting
+      //raycaster.setFromCamera(mouse, camera);
+      //const intersects = raycaster.intersectObjects(logoGroup.children, true);
+
+      // if (intersects.length > 0) {
+      //   const target = intersects[0].object.parent;
+
+      //   if (INTERSECTED !== target) {
+      //     // Reset the previous object
+      //     if (INTERSECTED) {
+      //       const originalPos = originalPositions.get(INTERSECTED);
+      //       if(originalPos){
+      //         gsap.to(INTERSECTED.position, { y: originalPos.y, duration: 0.3 });
+      //         gsap.to(INTERSECTED.scale, { x: 0.5, y: 0.5, z: 0.5, duration: 0.3 });
+      //       }
+      //     }
+
+      //     // Animate the new target
+      //     INTERSECTED = target;
+      //     gsap.to(INTERSECTED.position, { y: INTERSECTED.position.y + 0.2, duration: 0.3 });
+      //     gsap.to(INTERSECTED.scale, { x: 0.6, y: 0.6, z: 0.6, duration: 0.3 });
+      //   }
+      // } else {
+      //   if (INTERSECTED) {
+      //     const originalPos = originalPositions.get(INTERSECTED);
+      //     if(originalPos){
+      //       gsap.to(INTERSECTED.position, { y: originalPos.y, duration: 0.3 });
+      //       gsap.to(INTERSECTED.scale, { x: 0.5, y: 0.5, z: 0.5, duration: 0.3 });
+      //       INTERSECTED = null;
+      //     }
+      //   }
+      // }
+
       logoGroup.rotation.y += 0.005;
       renderer.render(scene, camera);
     };
     animate();
 
-    // Resize handler
-    // const handleResize = () => {
-    //   const width = mount.clientWidth;
-    //   const height = mount.clientHeight;
-    //   camera.aspect = width / height;
-    //   camera.updateProjectionMatrix();
-    //   renderer.setSize(width, height);
-    // };
-
-    //window.addEventListener("resize", handleResize);
-
-    // Cleanup
     return () => {
-      // window.removeEventListener("resize", handleResize);
-      // mount.removeChild(renderer.domElement);
+      //mount.removeEventListener('mousemove', onMouseMove);
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
   }, []);
 
   return (
-    <div
-      ref={mountRef}
-      className="w-full h-[60vh]"
-    />
-  );
+    <div className="relative w-full h-[60vh]">
+      <div ref={mountRef} className="w-full h-[60vh] absolute inset-0" />
+    </div>
+  )
 };
 
 export default ThreeCanvas;

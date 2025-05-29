@@ -3,6 +3,7 @@ import Pages from "../Pages";
 import "./GameRoom.css";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router-dom"
 import {
   fetchGames,
   selectAllGames,
@@ -16,6 +17,7 @@ import {
 
 
 const GameRoom = () => {
+  //const { console } = useParams()
   const [gameList, setGameList] = useState([]);
   const dispatch = useDispatch();
   const games = useSelector(selectAllGames);
@@ -28,7 +30,7 @@ const GameRoom = () => {
 
   useEffect(() => {
     if(status === 'idle'){
-      dispatch(fetchGames());
+      dispatch(fetchGames({}));
     }
   }, [status, dispatch])
 
@@ -54,7 +56,7 @@ const GameRoom = () => {
 
 
   return (
-    <div className="crt px-10 py-6 max-w-6xl mx-auto">
+    <div className="crt px-10 py-6 max-w-6xl mx-auto bg-gradient-to-bl from-[#1e1e2f] to-[#0a0f1c]">
       <header className="text-center text-pink-400 text-4xl font-mono p-6">
       🎮 Retro Game Room 🎮
       </header>
