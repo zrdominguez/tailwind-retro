@@ -11,12 +11,12 @@ import {
 
 const platformIcons = {
   playstation: <FaPlaystation className="text-white w-6 h-6" />,
-  xbox: <FaXbox className="text-green-400 w-ful h-full "/>,
-  pc: <FaWindows className="text-blue-300 w-full h-full" />,
+  xbox: <FaXbox className="text-green-400 w-6 h-6 "/>,
+  pc: <FaWindows className="text-blue-300 w-6 h-6" />,
   nintendo: <SiNintendo className="text-red-500 h-full w-full" />,
   ios: <FaApple className="text-gray-300 w-full h-full"/>,
   android: <FaAndroid className="text-green-500 w-full h-full" />,
-  sega: <img src='https://cdn.worldvectorlogo.com/logos/sega-logo.svg'/>
+  sega: <img src='https://cdn.worldvectorlogo.com/logos/sega-logo.svg' className='w-full h-full'/>
 };
 
 
@@ -46,9 +46,8 @@ const GameCard = ({game}) => {
 
           {parent_platforms?.filter((parent) => platformIcons[parent.platform.slug])
           .map((parent, i) => {
-            console.log(parent);
             return(
-            <div key={i} className="flex items-center w-8 h-8 ">
+            <div key={i} className="flex items-center justify-center w-8 h-8 ">
               {platformIcons[parent.platform.slug]}
             </div>
             )

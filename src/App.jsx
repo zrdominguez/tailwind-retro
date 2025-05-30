@@ -13,7 +13,7 @@ function App() {
       <SandwhichMenu />
       <Routes>
         <Route path="/" element={<LandingPage />}/>
-        <Route path="/games" element={<GameRoom />}/>
+        <Route path="/games/:consoleId" element={<GameRoom />}/>
       </Routes>
     </Router>
   )

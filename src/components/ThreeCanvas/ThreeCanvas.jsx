@@ -50,8 +50,8 @@ const ThreeCanvas = () => {
     const radius = 5;
 
     const modelPaths = [
-      {consoleName: "nes" ,path: '/logos/nintendo_nes_original/scene.gltf'},
-      {consoleName: "sega_saturn", path:'/logos/sega_saturn/scene.gltf'},
+      {consoleName: "nes" ,path: '/logos/nintendo_nes_original/scene.gltf', id: 49},
+      {consoleName: "sega-saturn", path:'/logos/sega_saturn/scene.gltf', id: 107},
       // '/models/console2/scene.gltf',
       // '/models/console3/scene.gltf',
       // etc...
@@ -59,7 +59,7 @@ const ThreeCanvas = () => {
 
     const originalPositions = new Map();
 
-    modelPaths.forEach(({consoleName, path}, index) => {
+    modelPaths.forEach(({consoleName, path, id}, index) => {
       loader.load(path, (gltf) => {
         const model = gltf.scene;
 
@@ -90,6 +90,7 @@ const ThreeCanvas = () => {
         }
 
         model.userData.consoleName = consoleName;
+        model.userData.id = id;
 
         // Save original pos
         originalPositions.set(model, model.position.clone());
@@ -135,9 +136,8 @@ const ThreeCanvas = () => {
             .start();
         } else {
           // Second click on the same object - navigate
-          const consoleId = clickedMesh.userData.consoleName || 'default';
-          console.log(consoleId)
-          navigate(`/games`);
+          const consoleId = clickedMesh.userData.id || '';
+          consoleId ? navigate(`/games/${consoleId}`) : navigate('/');
         }
       } else {
         // Clicked empty space - resume rotation

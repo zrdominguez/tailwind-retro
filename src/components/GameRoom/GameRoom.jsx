@@ -3,7 +3,7 @@ import Pages from "../Pages";
 import "./GameRoom.css";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import {
   fetchGames,
   selectAllGames,
@@ -17,7 +17,7 @@ import {
 
 
 const GameRoom = () => {
-  //const { console } = useParams()
+  const { consoleId } = useParams()
   const [gameList, setGameList] = useState([]);
   const dispatch = useDispatch();
   const games = useSelector(selectAllGames);
@@ -27,12 +27,12 @@ const GameRoom = () => {
   const prevPage = useSelector(selectPrevPage);
   const currentPage = useSelector(selectCurrentPage);
   const pageHistory = useSelector(selectPageHistory);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if(status === 'idle'){
-      dispatch(fetchGames({}));
-    }
-  }, [status, dispatch])
+      const filters = { platforms: consoleId }
+      dispatch(fetchGames({filters}));
+  }, [dispatch])
 
   useEffect(() => {
     if(status === 'succeeded'){
@@ -57,7 +57,10 @@ const GameRoom = () => {
 
   return (
     <div className="crt px-10 py-6 max-w-6xl mx-auto bg-gradient-to-bl from-[#1e1e2f] to-[#0a0f1c]">
-      <header className="text-center text-pink-400 text-4xl font-mono p-6">
+      <header
+      className="text-center text-pink-400 text-4xl font-mono p-6 cursor-pointer"
+      onClick={() => navigate("/")}
+      >
       🎮 Retro Game Room 🎮
       </header>
       {status == "failed" && <div className="text-red-600">Error: {error}</div>}

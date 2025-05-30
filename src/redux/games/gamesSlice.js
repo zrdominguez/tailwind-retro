@@ -28,7 +28,6 @@ export const fetchGames = createAsyncThunk(
       if (params.toString()) {
         query += `&${params.toString()}`;
       }
-      console.log(query);
       const response = await axios.get(query);
       return {
         results: response.data.results,
