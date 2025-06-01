@@ -55,8 +55,8 @@ const ThreeCanvas = () => {
     const radius = 5;
 
     const modelPaths = [
-      {consoleName: "nes" ,path: 'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/nintendo_nes_original/scene.gltf', id: 49},
-      {consoleName: "sega-saturn", path:'/', id: 107},
+      {consoleName: "NES" ,path: 'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/nintendo_nes_original/scene.gltf', id: 49},
+      {consoleName: "Sega Saturn", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_saturn/scene.gltf', id: 107},
       // '/models/console2/scene.gltf',
       // '/models/console3/scene.gltf',
       // etc...
@@ -103,7 +103,7 @@ const ThreeCanvas = () => {
 
         // Face the center
         model.lookAt(0, 0, 0);
-        if (path.includes("sega_saturn")) {
+        if (consoleName === "Sega Saturn") {
           model.rotation.y += Math.PI; // flip horizontally
           model.rotation.x += Math.PI; // flip vertically
         }
@@ -120,53 +120,68 @@ const ThreeCanvas = () => {
 
       }, undefined, (error) => {
         console.error(`Error loading model at ${path}:`, error);
+
+        // Create fallback cube
         const fallback = new THREE.Mesh(
           new THREE.BoxGeometry(1, 1, 1),
           new THREE.MeshStandardMaterial({ color: 0xff69b4 })
         );
 
-        // Optional: Add some fallback text or icon
-        // Position, scale, rotate if needed
+        // Position fallback cube in the circular layout
         const pos = computeCirclePosition(index, modelPaths.length, radius);
         fallback.position.copy(pos);
         originalPositions.set(fallback, pos.clone());
 
-        // Add to the same group
+        // Add fallback cube to the scene group
         logoGroup.add(fallback);
 
-        // Add 3D Text for console name
+        // Load font and add 3D text for console name
         const loaderFont = new FontLoader();
         loaderFont.load('/fonts/helvetiker_regular.typeface.json', (font) => {
-          const textGeo = new TextGeometry(consoleName,  {
+          const textGeo = new TextGeometry(consoleName, {
             font: font,
-            size: 0.4,          // Reasonable text size
-            height: 0.01,       // Very shallow extrusion to avoid stretching
-            curveSegments: 12,  // Smooth curves
+            size: 0.4,
+            height: 0.01,
+            curveSegments: 12,
           });
 
+          // Compute bounding boxes
           textGeo.computeBoundingBox();
-          const centerOffsetX = -0.1*(textGeo.boundingBox.max.x - textGeo.boundingBox.min.x);
+          const textSize = new THREE.Vector3();
+          textGeo.boundingBox.getSize(textSize);
+          const textCenter = new THREE.Vector3();
+          textGeo.boundingBox.getCenter(textCenter);
+
+          const fallbackBox = new THREE.Box3().setFromObject(fallback);
+          const fallbackSize = new THREE.Vector3();
+          fallbackBox.getSize(fallbackSize);
+          const fallbackCenter = new THREE.Vector3();
+          fallbackBox.getCenter(fallbackCenter);
+          textGeo.translate(-textCenter.x, -textCenter.y, -textCenter.z);
+
+          // Create text mesh
           const textMat = new THREE.MeshStandardMaterial({
             color: 0xffffff,
-            emissive: 0x444444,     // Optional glow
-            metalness: 0.3,         // Metallic finish
+            emissive: 0x444444,
+            metalness: 0.3,
             roughness: 0.6,
           });
-
           const textMesh = new THREE.Mesh(textGeo, textMat);
 
-          textMesh.scale.set(1, 1, 0);             // Neutral scale
-          textMesh.rotation.set(0, -Math.PI/2, 0); // Rotate flat on XZ-plane if fallback is on floor
+          // Position text centered above fallback cube
+          textMesh.position.copy(fallbackCenter);                 // Start at fallback center
+          textMesh.position.y += fallbackSize.y / 3 + textSize.y / 2 ;  // Slight gap above cube
+          textMesh.position.x = textCenter.x - 2;                   // Center text horizontally
+          textMesh.position.z = 0;
+          textMesh.scale.set(1, 1, 0)
 
-          // Position text nicely above fallback object
-          textMesh.position.set(centerOffsetX, 0.5, 0);   // Adjust height (Y) as needed
-          textMesh.translateX(-1.4);
+          // Optional: Rotate text to face camera or desired direction
+          textMesh.rotation.y = -Math.PI / 2; // Adjust based on fallback orientation
 
-          fallback.add(textMesh); // Add text as child of fallback
+
+          // Add text to fallback cube
+          fallback.add(textMesh);
         });
-
-
-
 
         modelsLoaded++;
         if (modelsLoaded === totalModels) setIsReady(true);
