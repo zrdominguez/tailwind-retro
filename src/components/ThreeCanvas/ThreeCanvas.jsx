@@ -72,14 +72,42 @@ const ThreeCanvas = () => {
       return new THREE.Vector3(x, y, z);
     }
 
+    //Keep track of all models original postitions
     const originalPositions = new Map();
+
     //Keep track of how many models were loaded
     const totalModels = modelPaths.length;
     let modelsLoaded = 0;
 
-    modelPaths.forEach(({consoleName, path, id}, index) => {
-      loader.load(path, (gltf) => {
+    modelPaths.forEach(({path, consoleName, id}, index) => {
+    // Create pivot (parent) for centering and positioning
+    const pivot = new THREE.Object3D();
+
+    // Create default cube as fallback
+    const defaultCube = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0xff69b4 }) // Hot pink
+    );
+
+    defaultCube.userData = { consoleName, id };
+
+    // Optional: You can center the cube if needed, though BoxGeometry is already centered
+    pivot.add(defaultCube);
+
+    // Position the pivot in the circle layout
+    const pos = computeCirclePosition(index, modelPaths.length, radius);
+    pivot.position.copy(pos);
+    originalPositions.set(pivot, pos.clone());
+
+    // Add pivot to logoGroup immediately
+    logoGroup.add(pivot);
+
+    // Load the AWS model
+    loader.load(
+      path,
+      (gltf) => {
         const model = gltf.scene;
+        model.userData = { consoleName, id }
         // Normalize size
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
@@ -88,124 +116,29 @@ const ThreeCanvas = () => {
         const scale = 1 / maxDim;
         model.scale.setScalar(scale);
 
-        //Center model
-        // Compute bounding box and center
+
+        // Compute bounding box and center the model
         const bbox = new THREE.Box3().setFromObject(model);
         const center = new THREE.Vector3();
         bbox.getCenter(center);
+        model.position.sub(center); // Center it to pivot
 
-        // Move model so center is at (0,0,0)
-        model.position.sub(center);
+        // Remove the default cube and add model
+        pivot.remove(defaultCube);
 
-        // box.setFromObject(model); // Update after scaling
-        // const center = new THREE.Vector3();
-        // box.getCenter(center);
-        // model.position.sub(center); // move pivot to center
+        pivot.add(model);
 
-
-        // Add debug marker
-        const sphereGeo = new THREE.SphereGeometry(0.05, 16, 16);
-        const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const marker = new THREE.Mesh(sphereGeo, sphereMat);
-        marker.position.copy(center);
-        logoGroup.add(marker);
-
-        // Position on circle
-        const pos = computeCirclePosition(index, modelPaths.length, radius);
-        model.position.add(pos);
-
-        // Face the center
-        model.lookAt(0, 0, 0);
-
-        if (consoleName === "Sega Saturn") {
-          //model.rotation.y -= 0.89; // flip horizontally
-          model.rotation.x += Math.PI; // flip vertically
-        }
-        else if(consoleName == "PS1"){
-          model.rotation.y += Math.PI;
-          //model.translateY(-1)
-        }else if(consoleName == "Xbox"){
-          model.rotation.y += Math.PI;
-        }
-
-        model.userData.consoleName = consoleName;
-        model.userData.id = id;
-
-        // Save original pos
-        originalPositions.set(model, model.position.clone());
-        logoGroup.add(model);
-        modelsLoaded++;
-
-        if (modelsLoaded === totalModels) setIsReady(true);
-
-      }, undefined, (error) => {
+        modelsLoaded++
+        if(totalModels === modelsLoaded) setIsReady(true);
+      },
+      undefined, // onProgress (optional)
+      (error) => {
         console.error(`Error loading model at ${path}:`, error);
-        // Create fallback cube
-        const fallback = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshStandardMaterial({ color: 0xff69b4 })
-        );
-
-        // Position fallback cube in the circular layout
-        const pos = computeCirclePosition(index, modelPaths.length, radius);
-        fallback.position.copy(pos);
-        originalPositions.set(fallback, pos.clone());
-
-        // Add fallback cube to the scene group
-        logoGroup.add(fallback);
-
-        // Load font and add 3D text for console name
-        const loaderFont = new FontLoader();
-        loaderFont.load('/fonts/helvetiker_regular.typeface.json', (font) => {
-          const textGeo = new TextGeometry(consoleName, {
-            font: font,
-            size: 0.4,
-            height: 0.01,
-            curveSegments: 12,
-          });
-
-          // Compute bounding boxes
-          textGeo.computeBoundingBox();
-          const textSize = new THREE.Vector3();
-          textGeo.boundingBox.getSize(textSize);
-          const textCenter = new THREE.Vector3();
-          textGeo.boundingBox.getCenter(textCenter);
-
-          const fallbackBox = new THREE.Box3().setFromObject(fallback);
-          const fallbackSize = new THREE.Vector3();
-          fallbackBox.getSize(fallbackSize);
-          const fallbackCenter = new THREE.Vector3();
-          fallbackBox.getCenter(fallbackCenter);
-          textGeo.translate(-textCenter.x, -textCenter.y, -textCenter.z);
-
-          // Create text mesh
-          const textMat = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            emissive: 0x444444,
-            metalness: 0.3,
-            roughness: 0.6,
-          });
-          const textMesh = new THREE.Mesh(textGeo, textMat);
-
-          // Position text centered above fallback cube
-          textMesh.position.copy(fallbackCenter);                 // Start at fallback center
-          textMesh.position.y += fallbackSize.y / 2 + textSize.y / 2 ;  // Slight gap above cube
-          textMesh.position.x = textCenter.x - 2;                   // Center text horizontally
-          textMesh.position.z = 0;
-          textMesh.scale.set(1, 1, 0)
-
-          // Optional: Rotate text to face camera or desired direction
-          textMesh.rotation.y = -Math.PI / 2; // Adjust based on fallback orientation
-
-
-          // Add text to fallback cube
-          fallback.add(textMesh);
-        });
-
-        modelsLoaded++;
-        if (modelsLoaded === totalModels) setIsReady(true);
+        // The default cube stays since model failed
+        modelsLoaded++
+        if(totalModels === modelsLoaded) setIsReady(true);
       });
-    })
+    });
 
     // Raycaster & Mouse
     const raycaster = new THREE.Raycaster();
@@ -264,6 +197,8 @@ const ThreeCanvas = () => {
 
     if (intersects.length > 0) {
       let clickedMesh = intersects[0].object;
+      const { id } = clickedMesh.userData || {};
+
       while (clickedMesh.parent && clickedMesh.parent !== logoGroup) {
         clickedMesh = clickedMesh.parent; // climb up to logoGroup child
       }
@@ -291,8 +226,7 @@ const ThreeCanvas = () => {
           .start();
       } else {
         // Second click: navigate
-        const consoleId = clickedMesh.userData.id || '';
-        consoleId ? navigate(`/games/${consoleId}`) : navigate('/');
+        id ? navigate(`/games/${id}`) : navigate('/');
       }
     } else {
       // Clicked empty space - resume rotation
@@ -300,7 +234,6 @@ const ThreeCanvas = () => {
       pausedObject = null;
     }
   };
-
 
     renderer.domElement.addEventListener('click', handleClick);
 
@@ -327,6 +260,7 @@ const ThreeCanvas = () => {
           // Gentle float up and down
           const floatHeight = 0.1 * Math.sin(elapsed * 2 + index);
           model.position.y = (originalPositions.get(model)?.y ?? 0) + floatHeight;
+          model.rotation.y += 0.01;  // Adjust speed as desired
           // Optional gentle wobble
           model.rotation.x = 0.05 * Math.sin(elapsed * 1.5 + index);
           model.rotation.z = 0.05 * Math.cos(elapsed * 1.5 + index);
