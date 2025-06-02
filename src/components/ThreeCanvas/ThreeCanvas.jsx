@@ -57,6 +57,8 @@ const ThreeCanvas = () => {
     const modelPaths = [
       {consoleName: "NES" ,path: 'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/nintendo_nes_original/scene.gltf', id: 49},
       {consoleName: "Sega Saturn", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_saturn/scene.gltf', id: 107},
+      {consoleName: "PS1", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/playstation_one/scene.gltf', id: 27},
+      {consoleName: "Xbox", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/xbox/scene.gltf', id: 80},
       // '/models/console2/scene.gltf',
       // '/models/console3/scene.gltf',
       // etc...
@@ -86,26 +88,44 @@ const ThreeCanvas = () => {
         const scale = 1 / maxDim;
         model.scale.setScalar(scale);
 
-        // Center model
-        box.setFromObject(model); // Update after scaling
+        //Center model
+        // Compute bounding box and center
+        const bbox = new THREE.Box3().setFromObject(model);
         const center = new THREE.Vector3();
-        box.getCenter(center);
-        model.position.sub(center); // move pivot to center
-        //const offset = model.position.clone();
+        bbox.getCenter(center);
+
+        // Move model so center is at (0,0,0)
+        model.position.sub(center);
+
+        // box.setFromObject(model); // Update after scaling
+        // const center = new THREE.Vector3();
+        // box.getCenter(center);
+        // model.position.sub(center); // move pivot to center
+
+
+        // Add debug marker
+        const sphereGeo = new THREE.SphereGeometry(0.05, 16, 16);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const marker = new THREE.Mesh(sphereGeo, sphereMat);
+        marker.position.copy(center);
+        logoGroup.add(marker);
 
         // Position on circle
-        //const angle = (index / modelPaths.length) * Math.PI * 2;
         const pos = computeCirclePosition(index, modelPaths.length, radius);
-        model.position.copy(pos);
-        //originalPositions.set(fallback, pos.clone());
-
-
+        model.position.add(pos);
 
         // Face the center
         model.lookAt(0, 0, 0);
+
         if (consoleName === "Sega Saturn") {
-          model.rotation.y += Math.PI; // flip horizontally
+          //model.rotation.y -= 0.89; // flip horizontally
           model.rotation.x += Math.PI; // flip vertically
+        }
+        else if(consoleName == "PS1"){
+          model.rotation.y += Math.PI;
+          //model.translateY(-1)
+        }else if(consoleName == "Xbox"){
+          model.rotation.y += Math.PI;
         }
 
         model.userData.consoleName = consoleName;
@@ -120,7 +140,6 @@ const ThreeCanvas = () => {
 
       }, undefined, (error) => {
         console.error(`Error loading model at ${path}:`, error);
-
         // Create fallback cube
         const fallback = new THREE.Mesh(
           new THREE.BoxGeometry(1, 1, 1),
@@ -170,7 +189,7 @@ const ThreeCanvas = () => {
 
           // Position text centered above fallback cube
           textMesh.position.copy(fallbackCenter);                 // Start at fallback center
-          textMesh.position.y += fallbackSize.y / 3 + textSize.y / 2 ;  // Slight gap above cube
+          textMesh.position.y += fallbackSize.y / 2 + textSize.y / 2 ;  // Slight gap above cube
           textMesh.position.x = textCenter.x - 2;                   // Center text horizontally
           textMesh.position.z = 0;
           textMesh.scale.set(1, 1, 0)
@@ -195,54 +214,95 @@ const ThreeCanvas = () => {
     let targetRotationY = 0
     let pausedObject = null;
 
-    const handleClick = (event) => {
-      const bounds = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-      mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+    // const handleClick = (event) => {
+    //   const bounds = renderer.domElement.getBoundingClientRect();
+    //   mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    //   mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(logoGroup.children, true);
+    //   raycaster.setFromCamera(mouse, camera);
+    //   const intersects = raycaster.intersectObjects(logoGroup.children, true);
 
-      if (intersects.length > 0) {
-        let clickedMesh = intersects[0].object;
-        while (clickedMesh.parent && clickedMesh.parent !== logoGroup) {
-          clickedMesh = clickedMesh.parent; // climb up to logoGroup child
-        }
+    //   if (intersects.length > 0) {
+    //     let clickedMesh = intersects[0].object;
+    //     while (clickedMesh.parent && clickedMesh.parent !== logoGroup) {
+    //       clickedMesh = clickedMesh.parent; // climb up to logoGroup child
+    //     }
 
-        if (!isPaused || clickedMesh !== pausedObject) {
-          // First click (or different object) - pause and focus
-          isPaused = true;
-          pausedObject = clickedMesh;
+    //     if (!isPaused || clickedMesh !== pausedObject) {
+    //       // First click (or different object) - pause and focus
+    //       isPaused = true;
+    //       pausedObject = clickedMesh;
 
-          const pos = clickedMesh.position; // local position (logoGroup space)
-          const angle = Math.atan2(pos.x, pos.z); // angle around Y
-          targetRotationY = -angle;
+    //       const pos = clickedMesh.position; // local position (logoGroup space)
+    //       const angle = Math.atan2(pos.x, pos.z); // angle around Y
+    //       clickedMesh.updateWorldMatrix(true, false);
+    //       targetRotationY = -angle;
 
-          new TWEEN.Tween(logoGroup.rotation, tweenGroup)
-            .to({ y: targetRotationY }, 1000)
-            .easing(TWEEN.Easing.Quadratic.Out)
-            .start();
-        } else {
-          // Second click on the same object - navigate
-          const consoleId = clickedMesh.userData.id || '';
-          consoleId ? navigate(`/games/${consoleId}`) : navigate('/');
-        }
-      } else {
-        // Clicked empty space - resume rotation
-        isPaused = false;
-        pausedObject = null;
-      }
-    };
-
-    renderer.domElement.addEventListener('click', handleClick);
-
-    // const onMouseMove = (event) => {
-    //   const rect = mount.getBoundingClientRect();
-    //   mouse.x = ((event.clientX - rect.left) / width) * 2 - 1;
-    //   mouse.y = -((event.clientY - rect.top) / height) * 2 + 1;
+    //       new TWEEN.Tween(logoGroup.rotation, tweenGroup)
+    //         .to({ y: targetRotationY }, 1000)
+    //         .easing(TWEEN.Easing.Quadratic.Out)
+    //         .start();
+    //     } else {
+    //       // Second click on the same object - navigate
+    //       const consoleId = clickedMesh.userData.id || '';
+    //       consoleId ? navigate(`/games/${consoleId}`) : navigate('/');
+    //     }
+    //   } else {
+    //     // Clicked empty space - resume rotation
+    //     isPaused = false;
+    //     pausedObject = null;
+    //   }
     // };
 
-    // mount.addEventListener('mousemove', onMouseMove);
+  const handleClick = (event) => {
+    const bounds = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(logoGroup.children, true);
+
+    if (intersects.length > 0) {
+      let clickedMesh = intersects[0].object;
+      while (clickedMesh.parent && clickedMesh.parent !== logoGroup) {
+        clickedMesh = clickedMesh.parent; // climb up to logoGroup child
+      }
+
+      if (!isPaused || clickedMesh !== pausedObject) {
+        isPaused = true;
+        pausedObject = clickedMesh;
+
+        // ✅ Get the object's position in the group's local space
+        const localPos = clickedMesh.position.clone();
+
+        // ✅ Calculate angle around Y axis based on local X and Z
+        const angle = Math.atan2(localPos.x, localPos.z);
+
+        // 🔥 Set the target rotation for the group
+        targetRotationY = -angle;
+
+        // 🔥 Clear existing tweens in the group
+        tweenGroup.getAll().forEach((tween) => tween.stop());
+
+        // 🔥 Smoothly rotate the group to bring the clicked object to center
+        new TWEEN.Tween(logoGroup.rotation, tweenGroup)
+          .to({ y: targetRotationY }, 1000)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .start();
+      } else {
+        // Second click: navigate
+        const consoleId = clickedMesh.userData.id || '';
+        consoleId ? navigate(`/games/${consoleId}`) : navigate('/');
+      }
+    } else {
+      // Clicked empty space - resume rotation
+      isPaused = false;
+      pausedObject = null;
+    }
+  };
+
+
+    renderer.domElement.addEventListener('click', handleClick);
 
     const clock = new THREE.Clock();
 
@@ -266,59 +326,22 @@ const ThreeCanvas = () => {
         logoGroup.children.forEach((model, index) => {
           // Gentle float up and down
           const floatHeight = 0.1 * Math.sin(elapsed * 2 + index);
-          model.position.y = originalPositions.get(model).y + floatHeight;
-
+          model.position.y = (originalPositions.get(model)?.y ?? 0) + floatHeight;
           // Optional gentle wobble
           model.rotation.x = 0.05 * Math.sin(elapsed * 1.5 + index);
           model.rotation.z = 0.05 * Math.cos(elapsed * 1.5 + index);
         });
 
-      //renderer.render(scene, camera);
-      // Raycasting
-      //raycaster.setFromCamera(mouse, camera);
-      //const intersects = raycaster.intersectObjects(logoGroup.children, true);
-
-      // if (intersects.length > 0) {
-      //   const target = intersects[0].object.parent;
-
-      //   if (INTERSECTED !== target) {
-      //     // Reset the previous object
-      //     if (INTERSECTED) {
-      //       const originalPos = originalPositions.get(INTERSECTED);
-      //       if(originalPos){
-      //         gsap.to(INTERSECTED.position, { y: originalPos.y, duration: 0.3 });
-      //         gsap.to(INTERSECTED.scale, { x: 0.5, y: 0.5, z: 0.5, duration: 0.3 });
-      //       }
-      //     }
-
-      //     // Animate the new target
-      //     INTERSECTED = target;
-      //     gsap.to(INTERSECTED.position, { y: INTERSECTED.position.y + 0.2, duration: 0.3 });
-      //     gsap.to(INTERSECTED.scale, { x: 0.6, y: 0.6, z: 0.6, duration: 0.3 });
-      //   }
-      // } else {
-      //   if (INTERSECTED) {
-      //     const originalPos = originalPositions.get(INTERSECTED);
-      //     if(originalPos){
-      //       gsap.to(INTERSECTED.position, { y: originalPos.y, duration: 0.3 });
-      //       gsap.to(INTERSECTED.scale, { x: 0.5, y: 0.5, z: 0.5, duration: 0.3 });
-      //       INTERSECTED = null;
-      //     }
-      //   }
-      // }
-
-        logoGroup.rotation.y += 0.005;
+        renderer.render(scene, camera);
 
       }catch(err){
         console.error('Something went wrong!!', err)
         shouldAnimate = false;
       }
-      renderer.render(scene, camera);
     };
     animate();
 
     return () => {
-      //mount.removeEventListener('mousemove', onMouseMove);
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
