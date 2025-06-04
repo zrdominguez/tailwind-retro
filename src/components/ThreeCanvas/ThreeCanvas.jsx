@@ -7,22 +7,13 @@ import { Group as TweenGroup } from '@tweenjs/tween.js';
 import { useNavigate } from "react-router-dom";
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
-
-
-
-
-
-const logos = [
-  ["/logos/dreamcast.png", "/logos/genesis.png" ],
-  ["/logos/gameboy.png", "/logos/gba.png"],
-  ["/logos/psone.png", "logos/ps2.png"],
-  ["/logos/nintendo_nes_original/scene.gltf", "/logos/snes.png"],
-  ["/logos/saturn.png", "/logos/atari.png"],
-  ["/logos/pc.png", "logos/xbox.png"],
-]
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 
 const ThreeCanvas = () => {
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('/draco/');
+  dracoLoader.setDecoderConfig({ type: 'js' });
   const navigate = useNavigate();
   const tweenGroup = new TweenGroup();
   const mountRef = useRef(null);
@@ -52,13 +43,14 @@ const ThreeCanvas = () => {
     scene.add(logoGroup);
 
     const loader = new GLTFLoader();
+    loader.setDRACOLoader(dracoLoader);
     const radius = 5;
 
     const modelPaths = [
-      {consoleName: "NES" ,path: 'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/nintendo_nes_original/scene.gltf', id: 49},
-      {consoleName: "Sega Saturn", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_saturn/scene.gltf', id: 107},
-      {consoleName: "PS1", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/playstation_one/scene.gltf', id: 27},
-      {consoleName: "Xbox", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/xbox/scene.gltf', id: 80},
+      {consoleName: "NES" , path: 'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/nes_original_draco.glb', id: 49},
+      {consoleName: "Sega Saturn", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_saturn_draco.glb', id: 107},
+      {consoleName: "PS1", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/psx_draco.glb', id: 27},
+      {consoleName: "Xbox", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/xbox_draco.glb', id: 80},
       // '/models/console2/scene.gltf',
       // '/models/console3/scene.gltf',
       // etc...
@@ -75,70 +67,149 @@ const ThreeCanvas = () => {
     //Keep track of all models original postitions
     const originalPositions = new Map();
 
-    //Keep track of how many models were loaded
-    const totalModels = modelPaths.length;
-    let modelsLoaded = 0;
+    //Wrap model loading into a promise
+    function loadModel(path, consoleName, id) {
+      return new Promise((resolve) => {
+        loader.load(
+          path,
+          (gltf) => {
+            const model = gltf.scene;
+            model.traverse((child) => {
+              if (child.isMesh) {
+                child.userData = { consoleName, id };
+              }
+            });
 
-    modelPaths.forEach(({path, consoleName, id}, index) => {
-    // Create pivot (parent) for centering and positioning
-    const pivot = new THREE.Object3D();
+            // Normalize model scale to fit in 1x1x1 cube
+            const bbox = new THREE.Box3().setFromObject(model);
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 1 / maxDim;
+            model.scale.setScalar(scale);
 
-    // Create default cube as fallback
-    const defaultCube = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0xff69b4 }) // Hot pink
-    );
+            // Recalculate bounding box *after* scaling
+            bbox.setFromObject(model);
+            const center = new THREE.Vector3();
+            bbox.getCenter(center);
+            model.position.sub(center); // Center model in pivot
+            resolve(model);
+          },
+          undefined,
+          (err) => {
+            console.error(`Error loading model ${consoleName}`, err);
+            resolve(null); // Fail gracefully
+          }
+        );
+      })
+    }
 
-    defaultCube.userData = { consoleName, id };
+    //Load and attach models in parallel
+    (async () => {
+      const promises = modelPaths.map(async ({ path, consoleName, id }, index) => {
+         // Set up pivot and fallback immediately
+        const pivot = new THREE.Object3D();
 
-    // Optional: You can center the cube if needed, though BoxGeometry is already centered
-    pivot.add(defaultCube);
+        // Create and attach a fallback cube
+        const fallback = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshStandardMaterial({ color: 0xff69b4 })
+        );
+        fallback.userData = { consoleName, id };
+        pivot.add(fallback);
 
-    // Position the pivot in the circle layout
-    const pos = computeCirclePosition(index, modelPaths.length, radius);
-    pivot.position.copy(pos);
-    originalPositions.set(pivot, pos.clone());
+        const pos = computeCirclePosition(index, modelPaths.length, radius);
+        pivot.position.copy(pos);
+        originalPositions.set(pivot, pos.clone());
+        logoGroup.add(pivot);
 
-    // Add pivot to logoGroup immediately
-    logoGroup.add(pivot);
-
-    // Load the AWS model
-    loader.load(
-      path,
-      (gltf) => {
-        const model = gltf.scene;
-        model.userData = { consoleName, id }
-        // Normalize size
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 1 / maxDim;
-        model.scale.setScalar(scale);
+        // Start loading async
+        return loadModel(path, consoleName, id).then((model) => {
+          if (model) {
+            pivot.remove(fallback);
+            pivot.add(model);
+          }
+        });
 
 
-        // Compute bounding box and center the model
-        const bbox = new THREE.Box3().setFromObject(model);
-        const center = new THREE.Vector3();
-        bbox.getCenter(center);
-        model.position.sub(center); // Center it to pivot
+        // const model = await loadModel(path, consoleName, id);
 
-        // Remove the default cube and add model
-        pivot.remove(defaultCube);
+        // if (model) {
+        //   pivot.remove(fallback);
+        //   pivot.add(model);
+        // }
 
-        pivot.add(model);
-
-        modelsLoaded++
-        if(totalModels === modelsLoaded) setIsReady(true);
-      },
-      undefined, // onProgress (optional)
-      (error) => {
-        console.error(`Error loading model at ${path}:`, error);
-        // The default cube stays since model failed
-        modelsLoaded++
-        if(totalModels === modelsLoaded) setIsReady(true);
+        // return true; // Count as loaded
       });
-    });
+
+      await Promise.all(promises);
+      setIsReady(true); // Done loading everything
+    })();
+
+    // modelPaths.forEach(({path, consoleName, id}, index) => {
+    // // Create pivot (parent) for centering and positioning
+    // const pivot = new THREE.Object3D();
+
+    // // Create default cube as fallback
+    // const defaultCube = new THREE.Mesh(
+    //   new THREE.BoxGeometry(1, 1, 1),
+    //   new THREE.MeshStandardMaterial({ color: 0xff69b4 }) // Hot pink
+    // );
+
+    // defaultCube.userData = { consoleName, id };
+
+    // // Optional: You can center the cube if needed, though BoxGeometry is already centered
+    // pivot.add(defaultCube);
+
+    // // Position the pivot in the circle layout
+    // const pos = computeCirclePosition(index, modelPaths.length, radius);
+    // pivot.position.copy(pos);
+    // originalPositions.set(pivot, pos.clone());
+
+    // // Add pivot to logoGroup immediately
+    // logoGroup.add(pivot);
+
+    // // Load the AWS model
+    // loader.load(
+    //   path,
+    //   (gltf) => {
+    //     const model = gltf.scene;
+    //     model.traverse((child) => {
+    //        if (child.isMesh) {
+    //         child.userData = { consoleName, id };
+    //       }
+    //     });
+    //     // Normalize size
+    //     const box = new THREE.Box3().setFromObject(model);
+    //     const size = new THREE.Vector3();
+    //     box.getSize(size);
+    //     const maxDim = Math.max(size.x, size.y, size.z);
+    //     const scale = 1 / maxDim;
+    //     model.scale.setScalar(scale);
+
+
+    //     // Compute bounding box and center the model
+    //     const bbox = new THREE.Box3().setFromObject(model);
+    //     const center = new THREE.Vector3();
+    //     bbox.getCenter(center);
+    //     model.position.sub(center); // Center it to pivot
+
+    //     // Remove the default cube and add model
+    //     pivot.remove(defaultCube);
+
+    //     pivot.add(model);
+
+    //     modelsLoaded++
+    //     if(totalModels === modelsLoaded) setIsReady(true);
+    //   },
+    //   undefined, // onProgress (optional)
+    //   (error) => {
+    //     console.error(`Error loading model at ${path}:`, error);
+    //     // The default cube stays since model failed
+    //     modelsLoaded++
+    //     if(totalModels === modelsLoaded) setIsReady(true);
+    //   });
+    // });
 
     // Raycaster & Mouse
     const raycaster = new THREE.Raycaster();
@@ -147,93 +218,66 @@ const ThreeCanvas = () => {
     let targetRotationY = 0
     let pausedObject = null;
 
-    // const handleClick = (event) => {
-    //   const bounds = renderer.domElement.getBoundingClientRect();
-    //   mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    //   mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
-    //   raycaster.setFromCamera(mouse, camera);
-    //   const intersects = raycaster.intersectObjects(logoGroup.children, true);
+    const handleClick = (event) => {
+      // 🖱️ 1. Convert the mouse click to normalized device coordinates (-1 to +1)
+      const bounds = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
-    //   if (intersects.length > 0) {
-    //     let clickedMesh = intersects[0].object;
-    //     while (clickedMesh.parent && clickedMesh.parent !== logoGroup) {
-    //       clickedMesh = clickedMesh.parent; // climb up to logoGroup child
-    //     }
+      // 📡 2. Set up raycasting from the camera using the mouse position
+      raycaster.setFromCamera(mouse, camera);
 
-    //     if (!isPaused || clickedMesh !== pausedObject) {
-    //       // First click (or different object) - pause and focus
-    //       isPaused = true;
-    //       pausedObject = clickedMesh;
+      // 🔍 3. Get all intersected objects (true = recursive into children)
+      const intersects = raycaster.intersectObjects(logoGroup.children, true);
 
-    //       const pos = clickedMesh.position; // local position (logoGroup space)
-    //       const angle = Math.atan2(pos.x, pos.z); // angle around Y
-    //       clickedMesh.updateWorldMatrix(true, false);
-    //       targetRotationY = -angle;
-
-    //       new TWEEN.Tween(logoGroup.rotation, tweenGroup)
-    //         .to({ y: targetRotationY }, 1000)
-    //         .easing(TWEEN.Easing.Quadratic.Out)
-    //         .start();
-    //     } else {
-    //       // Second click on the same object - navigate
-    //       const consoleId = clickedMesh.userData.id || '';
-    //       consoleId ? navigate(`/games/${consoleId}`) : navigate('/');
-    //     }
-    //   } else {
-    //     // Clicked empty space - resume rotation
-    //     isPaused = false;
-    //     pausedObject = null;
-    //   }
-    // };
-
-  const handleClick = (event) => {
-    const bounds = renderer.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(logoGroup.children, true);
-
-    if (intersects.length > 0) {
-      let clickedMesh = intersects[0].object;
-      const { id } = clickedMesh.userData || {};
-
-      while (clickedMesh.parent && clickedMesh.parent !== logoGroup) {
-        clickedMesh = clickedMesh.parent; // climb up to logoGroup child
+      // ❌ 4. If nothing was clicked, unpause and reset
+      if (intersects.length === 0) {
+        isPaused = false;
+        pausedObject = null;
+        return;
       }
 
-      if (!isPaused || clickedMesh !== pausedObject) {
+      // 🎯 5. Get the actual mesh that was hit by the ray
+      const meshHit = intersects[0].object;
+
+      // 🧠 6. Get any metadata you stored on the mesh (like console ID)
+      const clickedData = meshHit.userData || {};
+      const { id } = clickedData;
+
+      // 🪜 7. Climb up the object hierarchy until you reach the direct child of logoGroup
+      //      This is useful because your models are grouped under a "pivot" object for positioning
+      let clickedPivot = meshHit;
+      while (clickedPivot.parent && clickedPivot.parent !== logoGroup) {
+        clickedPivot = clickedPivot.parent;
+      }
+
+      // ⏸️ 8. If we’re not paused or clicked a new item, rotate to center the object
+      if (!isPaused || clickedPivot !== pausedObject) {
         isPaused = true;
-        pausedObject = clickedMesh;
+        pausedObject = clickedPivot;
 
-        // ✅ Get the object's position in the group's local space
-        const localPos = clickedMesh.position.clone();
+        // 📍 9. Get the clicked object's position within the group
+        const localPos = clickedPivot.position.clone();
 
-        // ✅ Calculate angle around Y axis based on local X and Z
+        // 🔄 10. Calculate the angle needed to rotate the group so the item faces forward (Z direction)
         const angle = Math.atan2(localPos.x, localPos.z);
-
-        // 🔥 Set the target rotation for the group
         targetRotationY = -angle;
 
-        // 🔥 Clear existing tweens in the group
+        // ❌ 11. Stop any existing rotation animations (tweens)
         tweenGroup.getAll().forEach((tween) => tween.stop());
 
-        // 🔥 Smoothly rotate the group to bring the clicked object to center
+        // 🌀 12. Animate the rotation of the group to center the clicked object
         new TWEEN.Tween(logoGroup.rotation, tweenGroup)
           .to({ y: targetRotationY }, 1000)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start();
+
       } else {
-        // Second click: navigate
+        // 🚪 13. If already centered and clicked again, navigate to the game detail page
         id ? navigate(`/games/${id}`) : navigate('/');
       }
-    } else {
-      // Clicked empty space - resume rotation
-      isPaused = false;
-      pausedObject = null;
-    }
-  };
+    };
 
     renderer.domElement.addEventListener('click', handleClick);
 
