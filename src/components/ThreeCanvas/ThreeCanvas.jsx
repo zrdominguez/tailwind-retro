@@ -10,6 +10,13 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 
 
+const modelPaths = [
+  {consoleName: "NES" , path: 'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/nes_original_draco.glb', id: 49},
+  {consoleName: "Sega Saturn", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_saturn_draco.glb', id: 107},
+  {consoleName: "PS1", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/psx_draco.glb', id: 27},
+  {consoleName: "Xbox", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/xbox_draco.glb', id: 80},
+];
+
 const ThreeCanvas = () => {
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath('/draco/');
@@ -18,6 +25,7 @@ const ThreeCanvas = () => {
   const tweenGroup = new TweenGroup();
   const mountRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -46,15 +54,7 @@ const ThreeCanvas = () => {
     loader.setDRACOLoader(dracoLoader);
     const radius = 5;
 
-    const modelPaths = [
-      {consoleName: "NES" , path: 'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/nes_original_draco.glb', id: 49},
-      {consoleName: "Sega Saturn", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_saturn_draco.glb', id: 107},
-      {consoleName: "PS1", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/psx_draco.glb', id: 27},
-      {consoleName: "Xbox", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/xbox_draco.glb', id: 80},
-      // '/models/console2/scene.gltf',
-      // '/models/console3/scene.gltf',
-      // etc...
-    ];
+
 
     function computeCirclePosition(index, total, radius) {
       const angle = (index / total) * Math.PI * 2;
@@ -66,9 +66,10 @@ const ThreeCanvas = () => {
 
     //Keep track of all models original postitions
     const originalPositions = new Map();
+    let modelsLoaded = 0;
 
     //Wrap model loading into a promise
-    function loadModel(path, consoleName, id) {
+    function loadModel(path, consoleName, id, onProgress) {
       return new Promise((resolve) => {
         loader.load(
           path,
@@ -93,11 +94,13 @@ const ThreeCanvas = () => {
             const center = new THREE.Vector3();
             bbox.getCenter(center);
             model.position.sub(center); // Center model in pivot
+            onProgress()
             resolve(model);
           },
           undefined,
           (err) => {
             console.error(`Error loading model ${consoleName}`, err);
+            onProgress()
             resolve(null); // Fail gracefully
           }
         );
@@ -118,98 +121,31 @@ const ThreeCanvas = () => {
         fallback.userData = { consoleName, id };
         pivot.add(fallback);
 
+        const updateProgress = () => {
+          modelsLoaded++;
+          setProgress((modelsLoaded / modelPaths.length) * 100);
+        };
+
         const pos = computeCirclePosition(index, modelPaths.length, radius);
         pivot.position.copy(pos);
         originalPositions.set(pivot, pos.clone());
         logoGroup.add(pivot);
 
         // Start loading async
-        return loadModel(path, consoleName, id).then((model) => {
+        return loadModel(path, consoleName, id, updateProgress).then((model) => {
           if (model) {
             pivot.remove(fallback);
             pivot.add(model);
           }
         });
-
-
-        // const model = await loadModel(path, consoleName, id);
-
-        // if (model) {
-        //   pivot.remove(fallback);
-        //   pivot.add(model);
-        // }
-
-        // return true; // Count as loaded
       });
 
       await Promise.all(promises);
-      setIsReady(true); // Done loading everything
+      //create a delay so the user can see the progress reach 100%
+      setTimeout(() => {
+        setIsReady(true); // Done loading everything
+      }, 1000)
     })();
-
-    // modelPaths.forEach(({path, consoleName, id}, index) => {
-    // // Create pivot (parent) for centering and positioning
-    // const pivot = new THREE.Object3D();
-
-    // // Create default cube as fallback
-    // const defaultCube = new THREE.Mesh(
-    //   new THREE.BoxGeometry(1, 1, 1),
-    //   new THREE.MeshStandardMaterial({ color: 0xff69b4 }) // Hot pink
-    // );
-
-    // defaultCube.userData = { consoleName, id };
-
-    // // Optional: You can center the cube if needed, though BoxGeometry is already centered
-    // pivot.add(defaultCube);
-
-    // // Position the pivot in the circle layout
-    // const pos = computeCirclePosition(index, modelPaths.length, radius);
-    // pivot.position.copy(pos);
-    // originalPositions.set(pivot, pos.clone());
-
-    // // Add pivot to logoGroup immediately
-    // logoGroup.add(pivot);
-
-    // // Load the AWS model
-    // loader.load(
-    //   path,
-    //   (gltf) => {
-    //     const model = gltf.scene;
-    //     model.traverse((child) => {
-    //        if (child.isMesh) {
-    //         child.userData = { consoleName, id };
-    //       }
-    //     });
-    //     // Normalize size
-    //     const box = new THREE.Box3().setFromObject(model);
-    //     const size = new THREE.Vector3();
-    //     box.getSize(size);
-    //     const maxDim = Math.max(size.x, size.y, size.z);
-    //     const scale = 1 / maxDim;
-    //     model.scale.setScalar(scale);
-
-
-    //     // Compute bounding box and center the model
-    //     const bbox = new THREE.Box3().setFromObject(model);
-    //     const center = new THREE.Vector3();
-    //     bbox.getCenter(center);
-    //     model.position.sub(center); // Center it to pivot
-
-    //     // Remove the default cube and add model
-    //     pivot.remove(defaultCube);
-
-    //     pivot.add(model);
-
-    //     modelsLoaded++
-    //     if(totalModels === modelsLoaded) setIsReady(true);
-    //   },
-    //   undefined, // onProgress (optional)
-    //   (error) => {
-    //     console.error(`Error loading model at ${path}:`, error);
-    //     // The default cube stays since model failed
-    //     modelsLoaded++
-    //     if(totalModels === modelsLoaded) setIsReady(true);
-    //   });
-    // });
 
     // Raycaster & Mouse
     const raycaster = new THREE.Raycaster();
@@ -326,10 +262,10 @@ const ThreeCanvas = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-[60vh]">
+    <div className="relative w-full h-[70vh]">
       {!isReady &&
         <div
-        className="absolute inset-0 flex items-center justify-center z-50 transition-opacity duration-500"
+        className="absolute inset-0 flex items-center justify-center flex-col z-50 transition-opacity duration-500"
         style={{background: 'radial-gradient(circle at center, #1e1e2f 0%, #0a0f1c 100%)'}}
         >
           <h1 className="loading text-xl flex items-center justify-self-center">Loading
@@ -337,6 +273,15 @@ const ThreeCanvas = () => {
             <span className="dot">.</span>
             <span className="dot">.</span>
           </h1>
+          <div className="w-64 mt-4">
+            <div className="w-full bg-gray-700 h-4 rounded-full overflow-hidden shadow-inner">
+              <div
+                className="bg-pink-400 h-4 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            <p className="text-white text-sm mt-1">{Math.round(progress)}%</p>
+          </div>
         </div>
       }
       <div ref={mountRef} className={`w-full h-60vh absolute inset-0`} />
