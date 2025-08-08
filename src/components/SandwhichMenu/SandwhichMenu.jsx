@@ -27,19 +27,40 @@ const SandwhichMenu = () => {
       {isOpen && (
         <div className="mt-2 bg-[#1e1e2f] text-white rounded-lg shadow-lg p-4 top-3em">
           <ul className="flex flex-col gap-1">
+            <li onClick={() => handleNavigate('/games/23')} className="dropdown-item">
+              Atari 2600
+            </li>
+            <li onClick={() => handleNavigate('/games/24')} className="dropdown-item">
+              Game Boy Advance
+            </li>
             <li onClick={() => handleNavigate('/games/49')} className="dropdown-item">
               NES
+            </li>
+            <li onClick={() => handleNavigate('/games/9')} className="dropdown-item">
+              Nintendo DS
+            </li>
+            <li onClick={() => handleNavigate('/games/4')} className="dropdown-item">
+              PC
+            </li>
+            <li onClick={() => handleNavigate('/games/27')} className="dropdown-item">
+              PlayStation 1
+            </li>
+            <li onClick={() => handleNavigate('/games/167')} className="dropdown-item">
+              Sega Genesis
             </li>
             <li onClick={() => handleNavigate('/games/107')} className="dropdown-item">
               Sega Saturn
             </li>
-            <li onClick={() => handleNavigate('/games/27')} className="dropdown-item">
-              PlayStation 1
+            <li onClick={() => handleNavigate('/games/79')} className="dropdown-item">
+              SNES
             </li>
             <li onClick={() => handleNavigate('/games/80')} className="dropdown-item">
               Xbox
             </li>
             {/* Add more consoles */}
+            {/* <li onClick={() => handleNavigate('/games/15')} className="dropdown-item">
+              PlayStation 2
+            </li> */}
           </ul>
         </div>
       )}

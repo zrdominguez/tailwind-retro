@@ -15,15 +15,16 @@ const modelPaths = [
   {consoleName: "Sega Saturn", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_saturn_draco.glb', id: 107},
   {consoleName: "PS1", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/psx_draco.glb', id: 27},
   {consoleName: "Xbox", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/xbox_draco.glb', id: 80},
-  //{consoleName: "Game Cube", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/gamecube_draco.glb', id: 105},
-  //{consoleName: "Game Boy", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/game_boy_draco.glb', id: 26},
   {consoleName: "Atari 2600", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/atari_2600_draco.glb', id: 23},
   {consoleName: "Sega Genesis", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/sega_genesis_draco.glb', id: 167},
   {consoleName: "SNES", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/snes_draco.glb', id: 79},
   {consoleName: "Game Boy Advance", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/game_boy_advance_draco.glb', id: 24},
   {consoleName: "PC", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/pc_draco.glb', id: 4},
   {consoleName: "Nintendo DS", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/ds_draco.glb', id: 9},
-  // {consoleName: "Sega Dreamcast", path:'', id: 106},
+  //{consoleName: "PS2", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/gamecube_draco.glb', id: 105},
+  //{consoleName: "Sega Dreamcast", path:'', id: 106},
+  //{consoleName: "Game Cube", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/gamecube_draco.glb', id: 105},
+  //{consoleName: "Game Boy", path:'https://zechariahdbucket.s3.us-east-2.amazonaws.com/3dConsoleModels/game_boy_draco.glb', id: 26},
 ];
 
 const GameCarousel = () => {
@@ -266,6 +267,7 @@ const GameCarousel = () => {
 
     return () => {
       renderer.dispose();
+      renderer.domElement.removeEventListener('click', handleClick);
       mount.removeChild(renderer.domElement);
     };
   }, []);
