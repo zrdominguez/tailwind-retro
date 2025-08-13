@@ -3,9 +3,11 @@
   cursor: pointer;
   margin-bottom: 0;
   transition: text-shadow 0.3s ease;
+  border-radius: 1.5rem;
 }
 
 .dropdown-item:hover{
+  background-color: black;
   text-shadow:
     0 0 5px rgba(255, 105, 180, 0.8),
     0 0 10px rgba(255, 20, 147, 0.6),

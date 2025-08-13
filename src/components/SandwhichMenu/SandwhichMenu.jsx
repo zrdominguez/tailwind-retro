@@ -13,7 +13,7 @@ const SandwhichMenu = () => {
   };
 
   return (
-    <div className="sandwich-button fixed top-4 right-4 z-[9999] flex flex-col items-end">
+    <div className="sandwich-button fixed top-4 right-20 z-[9999] flex flex-col items-end">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex flex-col justify-between w-10 h-8 bg-transparent border-none cursor-pointer focus:outline-none gap-1 items-center"

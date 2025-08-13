@@ -8,6 +8,7 @@ import {
   FaAndroid,
   FaApple
 } from 'react-icons/fa';
+import StarRating from '../StarRating';
 
 const platformIcons = {
   playstation: <FaPlaystation className="text-white w-6 h-6" />,
@@ -26,7 +27,8 @@ const GameCard = ({game}) => {
     genres,
     name,
     parent_platforms,
-    released
+    released,
+    rating
   } = game;
 
   return (
@@ -39,7 +41,7 @@ const GameCard = ({game}) => {
         />
       </div>
 
-      <div className="p-4 space-y-2">
+      <div className="p-4 space-y-3">
         <h2 className="text-xl font-bold">{name}</h2>
 
         <div className="flex flex-wrap justify-left gap-3 items-center">
@@ -66,6 +68,7 @@ const GameCard = ({game}) => {
             </span>
           ))}
         </div>
+          <StarRating rating={rating} />
       </div>
     </div>
   )

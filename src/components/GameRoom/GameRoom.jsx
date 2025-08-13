@@ -15,6 +15,19 @@ import {
   selectPageHistory
  } from "../../redux/games/gamesSlice";
 
+ const CONSOLE_NAMES = {
+  49: "NES",
+  107: "Sega Saturn",
+  27: "PS1",
+  80: "Xbox",
+  23: "Atari 2600",
+  167: "Sega Genesis",
+  79: "SNES",
+  24: "Game Boy Advance",
+  4: "PC",
+  9: "Nintendo DS"
+}
+
 
 const GameRoom = () => {
   const { consoleId } = useParams()
@@ -32,7 +45,7 @@ const GameRoom = () => {
   useEffect(() => {
       const filters = { platforms: consoleId }
       dispatch(fetchGames({filters}));
-  }, [dispatch])
+  }, [dispatch, consoleId])
 
   useEffect(() => {
     if(status === 'succeeded'){
@@ -58,10 +71,11 @@ const GameRoom = () => {
   return (
     <div className="crt px-10 py-6 max-w-6xl mx-auto bg-gradient-to-bl from-[#1e1e2f] to-[#0a0f1c]">
       <header
-      className="text-center text-pink-400 text-4xl font-mono p-6 cursor-pointer"
-      onClick={() => navigate("/")}
+      className="text-center text-pink-400 text-4xl font-mono p-6 cursor-pointer object-contain"
+        onClick={() => navigate("/")}
       >
-      🎮 Retro Game Room 🎮
+        🎮 Retro Game Room 🎮
+        <p>{CONSOLE_NAMES[consoleId]}</p>
       </header>
       {status == "failed" && <div className="text-red-600">Error: {error}</div>}
       {status === 'loading' ?
