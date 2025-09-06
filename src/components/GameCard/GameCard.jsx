@@ -1,5 +1,4 @@
 import './GameCard.css'
-import { useState } from "react";
 import { SiNintendo } from "react-icons/si";
 import {
   FaPlaystation,

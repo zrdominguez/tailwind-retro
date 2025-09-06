@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import  GameRoom  from './components/GameRoom';
 import LandingPage from './components/LandingPage';
 import SandwhichMenu from './components/SandwhichMenu';
+import GameDetails from './components/GameDetails/GameDetails';
 
 function App() {
 
@@ -14,6 +15,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />}/>
         <Route path="/games/:consoleId" element={<GameRoom />}/>
+        <Route path="/games/:consoleId/:gameId" element={<GameDetails />}/>
       </Routes>
     </Router>
   )

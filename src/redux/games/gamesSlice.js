@@ -46,7 +46,7 @@ export const fetchGameDetails = createAsyncThunk(
   'games/fetchGameDetails',
   async (gameId, thunkAPI) => {
     try {
-      let query = url || `https://api.rawg.io/api/games/${gameId}?key=${API_KEY}`;
+      let query = `https://api.rawg.io/api/games/${gameId}?key=${API_KEY}`;
       const response = await axios.get(query);
       return response.data;
     } catch (error) {
