@@ -42,6 +42,19 @@ export const fetchGames = createAsyncThunk(
   }
 );
 
+export const fetchGameDetails = createAsyncThunk(
+  'games/fetchGameDetails',
+  async (gameId, thunkAPI) => {
+    try {
+      let query = url || `https://api.rawg.io/api/games/${gameId}?key=${API_KEY}`;
+      const response = await axios.get(query);
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
+
 const initialState = {
     gamesList: [],
     status: 'idle',
@@ -49,8 +62,9 @@ const initialState = {
     nextPageUrl: null,
     prevPageUrl: null,
     currentPage:1,
-    pageHistory:{
-    }
+    pageHistory:{},
+    gameDetails: null,
+    gameDetailsStatus: 'idle',
 }
 
 const gamesSlice = createSlice({
@@ -83,7 +97,18 @@ const gamesSlice = createSlice({
       .addCase(fetchGames.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.error.message;
-      });
+      })
+      .addCase(fetchGameDetails.pending, (state) =>{
+        state.gameDetailsStatus = 'loading';
+      })
+      .addCase(fetchGameDetails.fulfilled, (state, action) => {
+        state.gameDetailsStatus = 'succeeded';
+        state.gameDetails = action.payload;
+      })
+      .addCase(fetchGameDetails.rejected, (state, action) => {
+        state.gameDetailsStatus = 'failed';
+        state.error = action.error.message
+      })
   }
 });
 
@@ -94,5 +119,7 @@ export const selectNextPage = (state) => state.games.nextPageUrl;
 export const selectPrevPage = (state) => state.games.prevPageUrl;
 export const selectCurrentPage = (state) => state.games.currentPage;
 export const selectPageHistory = (state) => state.games.pageHistory;
+export const selectGameDetails = (state) => state.games.gameDetails;
+export const selectGameDetailsStatus = (state) => state.games.gameDetailsStatus;
 
 export default gamesSlice.reducer;
