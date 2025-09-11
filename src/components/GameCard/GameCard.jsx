@@ -1,4 +1,5 @@
 import './GameCard.css'
+import { useNavigate, useLocation } from 'react-router-dom';
 import { SiNintendo } from "react-icons/si";
 import {
   FaPlaystation,
@@ -21,17 +22,27 @@ const platformIcons = {
 
 
 const GameCard = ({game}) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     background_image,
     genres,
     name,
     parent_platforms,
     released,
-    rating
+    rating,
+    id
   } = game;
 
+  const handleClick = () => {
+    navigate(location.pathname + `/${id}`)
+  }
+
   return (
-     <div className="w-72 rounded-2xl shadow-lg bg-gradient-to-br from-[#FF69B4] to-[#FF1493] metallic-hover overflow-hidden font-mono text-white">
+    <div
+    className="w-72 rounded-2xl shadow-lg bg-gradient-to-br from-[#FF69B4] to-[#FF1493] metallic-hover overflow-hidden font-mono text-white"
+    onClick={handleClick}
+    >
       <div className="w-full h-40 bg-black flex items-center justify-center">
         <img
           className="object-contain w-full h-full"
