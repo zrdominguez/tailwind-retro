@@ -50,7 +50,18 @@ function GameDetails() {
             <span className="dot">.</span>
             <span className="dot">.</span>
           </h1> :
-          <p className="mt-4 text-lg">{gameDetails?.description_raw}</p>
+          <div>
+            <p className="mt-4 text-lg">{gameDetails?.description_raw}</p>
+            <ul>
+              {gameDetails.developers && gameDetails.developers.map(dev => <li key={dev.id}>{dev.name}</li>)}
+            </ul>
+            <ul>
+              {gameDetails.genres && gameDetails.genres.map(gen => <li key={gen.id}>{gen.name}</li>)}
+            </ul>
+            <ul>
+              {gameDetails.platforms && gameDetails.platforms.map(plat => <li key={plat.platform.id}>{plat.platform.name}</li>)}
+            </ul>
+          </div>
         }
       </div>
     </div>
