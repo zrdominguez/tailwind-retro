@@ -51,7 +51,7 @@ function GameDetails() {
             <span className="dot">.</span>
           </h1> :
           <div>
-            <p className="mt-4 text-lg">{gameDetails?.description_raw}</p>
+            <p className="mt-4 text-lg" dangerouslySetInnerHTML={{ __html: gameDetails.description }} />
             <ul>
               {gameDetails.developers && gameDetails.developers.map(dev => <li key={dev.id}>{dev.name}</li>)}
             </ul>
