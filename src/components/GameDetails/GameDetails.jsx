@@ -27,13 +27,11 @@ function GameDetails() {
 
   console.log(gameDetails)
   return (
-    <div className="relative w-full h-screen">
-      <div
-        className="absolute inset-0 bg-cover bg-center filter brightness-50 bg-fixed"
-        style={{
-        backgroundImage: `url(${gameDetails?.background_image || null})`,
-      }}
-      />
+    <div
+    className="relative w-full min-h-screen bg-center bg-cover bg-no-repeat bg-fixed"
+    style={{ backgroundImage: `url(${gameDetails?.background_image || ''})` }}
+    >
+      <div className="fixed inset-0 bg-black/75" />
 
       <div className="relative z-10 p-8">
         <header
