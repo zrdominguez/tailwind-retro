@@ -1,22 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { act } from 'react';
 
 const API_KEY = '411e7482b082456cbf968bac1646f53a';
-
-// export const fetchGames = createAsyncThunk(
-//   'games/fetchGames',
-//   async ({ page = 1, url = null } = {}) => {
-//     const finalUrl = url ?? `https://api.rawg.io/api/games?key=${API_KEY}&page_size=15&dates=1980-01-01,2005-12-31&ordering=-rating`;
-//     const response = await axios.get(finalUrl);
-//     return {
-//       results: response.data.results,
-//       next: response.data.next,
-//       previous: response.data.previous,
-//       usedUrl: finalUrl,
-//       page: page,
-//     };
-//   }
-// );
 
 export const fetchGames = createAsyncThunk(
   'games/fetchGames',
@@ -55,6 +41,32 @@ export const fetchGameDetails = createAsyncThunk(
   }
 );
 
+export const fetchGameTrailers = createAsyncThunk(
+  'games/fetchGameTrailers',
+  async (gameId, thunkAPI) => {
+    try{
+      let query = `https://api.rawg.io/api/games/${gameId}/movies?key=${API_KEY}`;
+      const res = await axios.get(query)
+      return res.data;
+    }catch(error){
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
+
+export const fetchGameScreenshots = createAsyncThunk(
+  'games/fetchGameScreenshots',
+  async (gameId, thunkAPI) => {
+    try{
+      let query = `https://api.rawg.io/api/games/${gameId}/screenshots?key=${API_KEY}`;
+      const res = await axios.get(query);
+      return res.data;
+    }catch(error){
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
+
 const initialState = {
     gamesList: [],
     status: 'idle',
@@ -63,9 +75,15 @@ const initialState = {
     prevPageUrl: null,
     currentPage:1,
     pageHistory:{},
-    gameDetails: null,
-    gameDetailsStatus: 'idle',
-}
+    gameDetails:{
+      status:'idle',
+      data:null,
+      trailers:[],
+      trailersStatus:'idle',
+      screenshots:[],
+      screenshotsStatus:'idle',
+    },
+  }
 
 const gamesSlice = createSlice({
   name: 'games',
@@ -99,15 +117,37 @@ const gamesSlice = createSlice({
         state.error = action.error.message;
       })
       .addCase(fetchGameDetails.pending, (state) =>{
-        state.gameDetailsStatus = 'loading';
+        state.gameDetails.status = 'loading';
       })
       .addCase(fetchGameDetails.fulfilled, (state, action) => {
-        state.gameDetailsStatus = 'succeeded';
-        state.gameDetails = action.payload;
+        state.gameDetails.status = 'succeeded';
+        state.gameDetails.data = action.payload;
       })
       .addCase(fetchGameDetails.rejected, (state, action) => {
-        state.gameDetailsStatus = 'failed';
-        state.error = action.error.message
+        state.gameDetails.status = 'failed';
+        state.error = action.error.message;
+      })
+      .addCase(fetchGameTrailers.pending, (state) => {
+        state.gameDetails.trailersStatus = 'loading';
+      })
+      .addCase(fetchGameTrailers.fulfilled, (state, action) => {
+        state.gameDetails.trailersStatus = 'succeeded';
+        state.gameDetails.trailers = action.payload;
+      })
+      .addCase(fetchGameTrailers.rejected, (state, action) => {
+        state.gameDetails.trailersStatus = 'failed';
+        state.error = action.error.message;
+      })
+      .addCase(fetchGameScreenshots.pending, (state) => {
+        state.gameDetails.screenshotsStatus = 'loading';
+      })
+      .addCase(fetchGameScreenshots.fulfilled, (state, action) => {
+        state.gameDetails.screenshotsStatus = 'succeeded';
+        state.gameDetails.screenshots = action.payload;
+      })
+      .addCase(fetchGameScreenshots.rejected, (state, action) => {
+        state.gameDetails.screenshotsStatus = 'failed';
+        state.error = action.error.message;
       })
   }
 });
@@ -119,7 +159,11 @@ export const selectNextPage = (state) => state.games.nextPageUrl;
 export const selectPrevPage = (state) => state.games.prevPageUrl;
 export const selectCurrentPage = (state) => state.games.currentPage;
 export const selectPageHistory = (state) => state.games.pageHistory;
-export const selectGameDetails = (state) => state.games.gameDetails;
-export const selectGameDetailsStatus = (state) => state.games.gameDetailsStatus;
+export const selectGameDetails = (state) => state.games.gameDetails.data;
+export const selectGameDetailsStatus = (state) => state.games.gameDetails.status;
+export const selectGameTrailers = (state) => state.games.gameDetails.trailers;
+export const selectGameTrailersStatus = (state) => state.games.gameDetails.trailersStatus;
+export const selectGameScreenshots = (state) => state.games.gameDetails.screenshots;
+export const selectGameScreenshotsStatus = (state) => state.games.gameDetails.screenshotsStatus;
 
 export default gamesSlice.reducer;
