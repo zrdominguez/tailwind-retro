@@ -16,7 +16,7 @@
 
 ## 🖼️ Screenshots
 
-*(Add screenshots here if you want!)*
+*(Screen Shots coming soon!!)*
 
 ---
 
